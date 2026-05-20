@@ -124,11 +124,11 @@ function render() {
   
   // SHACHARIS
   if (date.getDay() >= 1 && date.getDay() <= 5) { // Mon-Fri
-    buildRow(grid, "Shacharis 1", CONFIG.shacharis.default);
-    buildRow(grid, "Shacharis 2", CONFIG.shacharis.shach2);
+    buildRow(grid, "שחרית א", CONFIG.shacharis.default);
+    buildRow(grid, "שחרית ב", CONFIG.shacharis.shach2);
   } else if (isSunday) {
-    buildRow(grid, "Shacharis 1", CONFIG.shacharis.default);
-    buildRow(grid, "Shacharis 2", CONFIG.shacharis.shach2);
+    buildRow(grid, "שחרית א", CONFIG.shacharis.default);
+    buildRow(grid, "שחרית ב", CONFIG.shacharis.shach2);
   }
   
   // Shacharis 3 on Sunday or legal holidays
@@ -141,14 +141,14 @@ function render() {
   if (isSunday || isLegalHoliday) {
     minchaTime = CONFIG.mincha.sunday;
   }
-  buildRow(grid, "Mincha", minchaTime);
+  buildRow(grid, "מנחה", minchaTime);
   
   // MAARIV
-  buildRow(grid, "Maariv 2", CONFIG.maariv.fixed2);
+  buildRow(grid, "מעריב ב", CONFIG.maariv.fixed2);
   
   // Maariv 3 on Sun-Thu
   if (isSunday || isMonThu) {
-    buildRow(grid, "Maariv 3", CONFIG.maariv.fixed3);
+    buildRow(grid, "מעריב ג", CONFIG.maariv.fixed3);
   }
 }
 
