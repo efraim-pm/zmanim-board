@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Zmanim TV Board</title>
+  <style>
+    :root { --bg:#070a0f; --fg:#e8eefc; --muted:#9aa6c0; --accent:#6aa6ff; --card: rgba(255,255,255,.06); }
+    body { margin:0; background:var(--bg); color:var(--fg); font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 18px; }
+    .top { display:flex; gap:14px; align-items:baseline; justify-content:space-between; flex-wrap:wrap; }
+    h1 { margin:0; font-size: 28px; letter-spacing:.2px; }
+    .sub { color:var(--muted); font-size: 14px; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+    .card { background:var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 14px 14px; }
+    .row { display:flex; justify-content:space-between; gap:12px; align-items:baseline; }
+    .label { color:var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing:.6px; }
+    .time { font-size: 32px; font-weight: 700; }
+    .time.small { font-size: 26px; }
+    .fine { color:var(--muted); font-size: 12px; margin-top: 8px; line-height: 1.35; }
+    .footer { margin-top: 14px; display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; color:var(--muted); font-size: 12px; }
+    .blink { color: #ffcc66; animation: blink 1s steps(2,start) infinite; }
+    @keyframes blink { 0%{opacity:1} 50%{opacity:.25} 100%{opacity:1} }
+    @media (max-width: 720px){ .grid{ grid-template-columns: 1fr; } .time{ font-size: 28px; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>Zmanim Board</h1>
+        <div class="sub" id="todayLine">Loading…</div>
+      </div>
+      <div class="sub" id="refreshLine"></div>
+    </div>
+
+    <div class="grid" id="grid">
+      <!-- rows injected -->
+    </div>
+
+    <div class="footer">
+      <div id="debugLine"></div>
+      <div>Auto-refreshes every minute</div>
+    </div>
+  </div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
