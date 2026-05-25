@@ -199,7 +199,7 @@ function fmt(d) { if (!d) return "—"; return timeFmt.format(d); }
 function fmtWithSeconds(d) { if (!d) return "—"; return timeFmtWithSeconds.format(d); }
 function dateAtLocal(date, hour, minute = 0) { return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute, 0, 0); }
 function toTimeStringFromHM(hh, mm) { const dt = new Date(); dt.setHours(hh, mm, 0, 0); return timeFmt.format(dt); }
-function roundToNearest5Minutes(d) { const mins = d.getHours() * 60 + d.getMinutes(); const r = Math.round(mins / 5) * 5; return { hh: Math.floor(r / 60), mm: r % 60 }; }
+function roundToNearest5Minutes(d) { const mins = d.getHours() * 60 + d.getMinutes(); const r = Math.round(mins / 5) * 5; const hh = Math.floor(r / 60); const mm = r % 60; return { hh, mm }; }
 
 function buildCard(grid, label, timeText, extra = "") {
   const card = document.createElement("div"); card.className = "card";
@@ -217,11 +217,13 @@ function isUSLegalHoliday(jsDate) { const month = jsDate.getMonth() + 1; const d
 function isShabbat(jsDate) { return jsDate.getDay() === 6; }
 
 function computeZmanimForDate(jsDate) {
-  const jd = toJulian(jsDate);
-  const { sunriseUTCmin, sunsetUTCmin } = (() => {
-    const rst = sunriseSunsetUTC(jd, CONFIG.lat, CONFIG.lon);
-    return { sunriseUTCmin: rst.sunriseUTCmin, sunsetUTCmin: rst.sunsetUTCmin };
-  })();
+-  const jd = toJulian(jsDate);
++  // Use midnight UTC for the given calendar date to match NOAA algorithms
++  const jd = toJulian(new Date(Date.UTC(jsDate.getFullYear(), jsDate.getMonth(), jsDate.getDate())));
+   const { sunriseUTCmin, sunsetUTCmin } = (() => {
+     const rst = sunriseSunsetUTC(jd, CONFIG.lat, CONFIG.lon);
+     return { sunriseUTCmin: rst.sunriseUTCmin, sunsetUTCmin: rst.sunsetUTCmin };
+   })();
 
   if (sunriseUTCmin == null || sunsetUTCmin == null) return null;
 
