@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Zmanim TV Board</title>
+  <title>לוח זמנים - Zmanim Board</title>
   <style>
     :root { --bg:#070a0f; --fg:#e8eefc; --muted:#9aa6c0; --accent:#6aa6ff; --card: rgba(255,255,255,.06); }
     body { margin:0; background:var(--bg); color:var(--fg); font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
@@ -15,32 +15,49 @@
     .card { background:var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 14px 14px; }
     .row { display:flex; justify-content:space-between; gap:12px; align-items:baseline; }
     .label { color:var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing:.6px; }
+    .label.hebrew { text-transform:none; font-size:16px; }
     .time { font-size: 32px; font-weight: 700; }
     .time.small { font-size: 26px; }
     .fine { color:var(--muted); font-size: 12px; margin-top: 8px; line-height: 1.35; }
+    .section { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    .section .panel { background:rgba(255,255,255,.03); padding:10px; border-radius:10px }
+    .flags { margin-top:8px; color:var(--muted); }
     .footer { margin-top: 14px; display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; color:var(--muted); font-size: 12px; }
-    .blink { color: #ffcc66; animation: blink 1s steps(2,start) infinite; }
-    @keyframes blink { 0%{opacity:1} 50%{opacity:.25} 100%{opacity:1} }
-    @media (max-width: 720px){ .grid{ grid-template-columns: 1fr; } .time{ font-size: 28px; } }
+    .shabbat { grid-column: 1 / -1; text-align:center; }
+    @media (max-width: 720px){ .grid{ grid-template-columns: 1fr; } .time{ font-size: 28px; } .section{ grid-template-columns: 1fr } }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="top">
       <div>
-        <h1>Zmanim Board</h1>
-        <div class="sub" id="todayLine">Loading…</div>
+        <h1>לוח זמנים</h1>
+        <div class="sub" id="todayLine">טוען…</div>
       </div>
       <div class="sub" id="refreshLine"></div>
     </div>
 
-    <div class="grid" id="grid">
-      <!-- rows injected -->
+    <div class="section">
+      <div class="panel" id="todaySection">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:700">היום</div>
+          <div class="flags" id="todayFlags"></div>
+        </div>
+        <div class="grid" id="todayGrid"></div>
+      </div>
+
+      <div class="panel" id="tomorrowSection">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:700">מחר</div>
+          <div class="flags" id="tomorrowFlags"></div>
+        </div>
+        <div class="grid" id="tomorrowGrid"></div>
+      </div>
     </div>
 
     <div class="footer">
       <div id="debugLine"></div>
-      <div>Auto-refreshes every minute</div>
+      <div>מתעדכן אוטומטית כל דקה</div>
     </div>
   </div>
 
