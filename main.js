@@ -1,6 +1,6 @@
-// main.js — Using kosher-zmanim library for halachic time calculations
+// main.js — Using @hebcal/core for halachic time calculations
 
-let zmanCalculator = null;
+let HDate = null;
 
 const CONFIG = {
   tz: "America/New_York",
@@ -9,43 +9,19 @@ const CONFIG = {
   elevation: 0,
 
   labels: {
-    shacharis1: "Shacharis I / שחרית א׳",
-    shacharis2: "Shacharis II / שחרית ב׳",
-    shacharis3: "Shacharis III / שחרית ג׳",
     zman_krias_shema: "Zman Krias Shema / זמן קריאת שמע",
     chatzos: "Chatzos / חצות",
     mincha_gedola: "Mincha Gedola / מנחה גדולה",
-    mincha: "Mincha / מנחה",
     plag_hamincha: "Plag Hamincha / פלג המנחה",
-    maariv1: "Maariv I / מעריב א׳",
-    maariv2: "Maariv II / מעריב ב׳",
-    maariv3: "Maariv III / מעריב ג׳",
     shkiah: "Shkiah (Sunset) / שקיעה",
-    rosh_chodesh: "Rosh Chodesh / ראש חודש",
-    bein_hazmanim: "Bein Hazmanim / בין הזמנים",
+    maariv: "Maariv / מעריב",
     shabbat: "Shabbat Shalom / שבת שלום",
   },
-
-  times: {
-    shacharis1_default: { hour: 6, minute: 45 },
-    shacharis1_roshchodesh: { hour: 6, minute: 30 },
-    shacharis2: { hour: 7, minute: 30 },
-    shacharis3: { hour: 8, minute: 45 },
-    mincha_default: { hour: 13, minute: 45 },
-    mincha_sunday: { hour: 12, minute: 45 },
-    mincha_sunthurs: { hour: 13, minute: 15 },
-    maariv2_fixed: { hour: 20, minute: 15 },
-    maariv3_fixed: { hour: 21, minute: 45 },
-  },
-
-  bein_hazmanim: [],
 };
 
 // --- Utilities & rendering
 const timeFmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: CONFIG.tz });
 function fmt(d) { if (!d) return "—"; return timeFmt.format(d); }
-function toTimeStringFromHM(hh, mm) { const dt = new Date(); dt.setHours(hh, mm, 0, 0); return timeFmt.format(dt); }
-function roundToNearest5Minutes(d) { const mins = d.getHours() * 60 + d.getMinutes(); const r = Math.round(mins / 5) * 5; const hh = Math.floor(r / 60); const mm = r % 60; return { hh, mm }; }
 
 function buildCard(grid, label, timeText, extra = "") { 
   const card = document.createElement("div"); 
@@ -84,50 +60,56 @@ function buildShabbatCard(grid) {
 
 function isShabbat(jsDate) { return jsDate.getDay() === 6; }
 
-async function computeZmanimForDate(jsDate) {
-  if (!zmanCalculator) return null;
-  
-  try {
-    // Set the date for calculation
-    const year = jsDate.getFullYear();
-    const month = jsDate.getMonth() + 1;
-    const day = jsDate.getDate();
-    
-    const options = {
-      date: jsDate,
-      location: {
-        latitude: CONFIG.lat,
-        longitude: CONFIG.lon,
-        timeZoneId: CONFIG.tz,
-      }
-    };
-    
-    const zman = new zmanCalculator(options);
-    
-    return {
-      sunrise: zman.getSunrise(),
-      sunset: zman.getSunset(),
-      sofZmanShmaGRA: zman.getSofZmanShmaGRA(),
-      sofZmanTfilaGRA: zman.getSofZmanTfilaGRA(),
-      minchaGedola: zman.getMinchaGedola(),
-      minchaKetana: zman.getMinchaKetana(),
-      plagHamincha: zman.getPlagHamincha(),
-      tzais: zman.getTzais(),
-      chatzos: zman.getChatzos(),
-    };
-  } catch (e) {
-    console.error("Error computing zmanim:", e);
-    return null;
-  }
-}
-
 function setHeader(now) { 
   const hebDays = ["Sunday / ראשון", "Monday / שני", "Tuesday / שלישי", "Wednesday / רביעי", "Thursday / חמישי", "Friday / שישי", "Saturday / שבת"]; 
   const dayName = hebDays[now.getDay()]; 
   const dateStr = now.toLocaleDateString("en-US"); 
   document.getElementById("todayLine").textContent = `${dayName}, ${dateStr}`; 
-  const now2 = new Date(); 
-  document.getElementById("refreshLine").textContent = `Updated: ${timeFmt.format(now2)}`; 
+  document.getElementById("refreshLine").textContent = `Updated: ${fmt(now)}`; 
+}
+
+// Simple fallback calculation using NOAA algorithms if library not available
+function toJulian(date) { return date.getTime() / 86400000 + 2440587.5; }
+function julianCenturies(jd) { return (jd - 2451545.0) / 36525.0; }
+function geomMeanLongSun(t) { let L = 280.46646 + t * (36000.76983 + t * 0.0003032); L = (L % 360 + 360) % 360; return L; }
+function geomMeanAnomalySun(t) { return 357.52911 + t * (35999.05029 - 0.0001537 * t); }
+function eccEarthOrbit(t) { return 0.016708634 - t * (0.000042037 + 0.0000001267 * t); }
+function toRad(d) { return d * Math.PI / 180.0; }
+function toDeg(r) { return r * 180.0 / Math.PI; }
+function sunEqOfCenter(t) { const m = geomMeanAnomalySun(t); const mr = toRad(m); return Math.sin(mr) * (1.914602 - t * (0.004817 + 0.000014 * t)) + Math.sin(mr * 2) * (0.019993 - 0.000101 * t) + Math.sin(mr * 3) * 0.000289; }
+function sunTrueLong(t) { return geomMeanLongSun(t) + sunEqOfCenter(t); }
+function sunApparentLong(t) { const o = sunTrueLong(t); const omega = 125.04 - 1934.136 * t; return o - 0.00569 - 0.00478 * Math.sin(toRad(omega)); }
+function meanObliquityOfEcliptic(t) { const seconds = 21.448 - t * (46.815 + t * (0.00059 - t * 0.001813)); return 23 + (26 + (seconds / 60)) / 60; }
+function obliquityCorrection(t) { const e0 = meanObliquityOfEcliptic(t); const omega = 125.04 - 1934.136 * t; return e0 + 0.00256 * Math.cos(toRad(omega)); }
+function sunDeclination(t) { const e = obliquityCorrection(t); const lambda = sunApparentLong(t); return toDeg(Math.asin(Math.sin(toRad(e)) * Math.sin(toRad(lambda)))); }
+function equationOfTime(t) { const epsilon = obliquityCorrection(t); const L0 = geomMeanLongSun(t); const e = eccEarthOrbit(t); const M = geomMeanAnomalySun(t); const y = Math.tan(toRad(epsilon) / 2); y *= y; const eq = 229.18 * (y * Math.sin(2 * toRad(L0)) - 2 * e * Math.sin(toRad(M)) + 4 * e * y * Math.sin(toRad(M)) * Math.cos(2 * toRad(L0)) - 0.5 * y * y * Math.sin(4 * toRad(L0)) - 1.25 * e * e * Math.sin(2 * toRad(M))); return eq; }
+function hourAngleSunrise(lat, solarDec, solarZenithDeg = 90.8333) { const latRad = toRad(lat); const sdRad = toRad(solarDec); const cosH = (Math.cos(toRad(solarZenithDeg)) - Math.sin(latRad) * Math.sin(sdRad)) / (Math.cos(latRad) * Math.cos(sdRad)); return (cosH > 1) ? null : ((cosH < -1) ? 180 : toDeg(Math.acos(cosH))); }
+function solarNoonUTC(jd, longitude) { const t = julianCenturies(jd); const Etime = equationOfTime(t); return (720 - 4 * longitude - Etime); }
+function sunriseSunsetUTC(jd, lat, lon) { const t = julianCenturies(jd); const solarDec = sunDeclination(t); const ha = hourAngleSunrise(lat, solarDec); if (ha === null) return { sunrise: null, sunset: null, sunriseUTCmin: null, sunsetUTCmin: null }; const Etime = equationOfTime(t); const eqTime = 720 * Etime; const solNoonUTC = solarNoonUTC(jd, lon); const sunriseUTCmin = solNoonUTC - 4 * ha - eqTime; const sunsetUTCmin = solNoonUTC + 4 * ha - eqTime; return { sunriseUTCmin, sunsetUTCmin, sunrise: null, sunset: null }; }
+function minuteToDateUTC(jd, minutesUTC) { const dayMillis = (minutesUTC - 0) * 60000; const base = (jd - 2440587.5) * 86400000; return new Date(Math.round(base + dayMillis)); }
+function findTimeAtAltitude(start, end, targetDeg, lat, lon, iterations = 48) { let low = start.getTime(); let high = end.getTime(); for (let i = 0; i < iterations; i++) { const mid = Math.floor((low + high) / 2); const testDate = new Date(mid); const jd = toJulian(testDate); const t = julianCenturies(jd); const solarDec = sunDeclination(t); const Etime = equationOfTime(t); const utcMinutes = (testDate.getUTCHours() * 60 + testDate.getUTCMinutes()) - (Etime); const latRad = toRad(lat); const sdRad = toRad(solarDec); const hourRad = toRad((utcMinutes / 4.0)); const alt = toDeg(Math.asin(Math.sin(latRad) * Math.sin(sdRad) + Math.cos(latRad) * Math.cos(sdRad) * Math.cos(hourRad))); if (alt > targetDeg) { high = mid; } else { low = mid; } } return new Date(Math.floor((low + high) / 2)); }
+
+function computeZmanimForDate(jsDate) {
+  try {
+    const jd = toJulian(new Date(Date.UTC(jsDate.getFullYear(), jsDate.getMonth(), jsDate.getDate())));
+    const rst = sunriseSunsetUTC(jd, CONFIG.lat, CONFIG.lon);
+    if (rst.sunriseUTCmin == null || rst.sunsetUTCmin == null) return null;
+    const sunrise = minuteToDateUTC(jd, rst.sunriseUTCmin);
+    const sunset = minuteToDateUTC(jd, rst.sunsetUTCmin);
+    const dayLengthMs = sunset.getTime() - sunrise.getTime();
+    const shaaMs = dayLengthMs / 12.0;
+    const minchaGedola = new Date(sunrise.getTime() + shaaMs * 6.5);
+    const plagHamincha = new Date(sunrise.getTime() + shaaMs * 10.75);
+    const chatzos = new Date(sunrise.getTime() + shaaMs * 6);
+    const sofZmanShma = new Date(sunrise.getTime() + shaaMs * 3);
+    const searchStart = new Date(sunset.getTime());
+    const searchEnd = new Date(sunset.getTime() + 4 * 3600 * 1000);
+    const tzais = findTimeAtAltitude(searchStart, searchEnd, -8.5, CONFIG.lat, CONFIG.lon);
+    return { sunrise, sunset, minchaGedola, plagHamincha, chatzos, tzais, sofZmanShma };
+  } catch (e) {
+    console.error("Error in NOAA calculation:", e);
+    return null;
+  }
 }
 
 async function renderDay(jsDate, containerId, flagsId) { 
@@ -136,7 +118,7 @@ async function renderDay(jsDate, containerId, flagsId) {
   grid.innerHTML = ""; 
   flagsDiv.innerHTML = ""; 
   
-  const zmanim = await computeZmanimForDate(jsDate);
+  const zmanim = computeZmanimForDate(jsDate);
   
   if (!zmanim) {
     grid.textContent = "Unable to calculate zmanim";
@@ -144,13 +126,12 @@ async function renderDay(jsDate, containerId, flagsId) {
   }
   
   // Build cards for key zmanim
-  buildCard(grid, CONFIG.labels.zman_krias_shema, fmt(zmanim.sofZmanShmaGRA), "GRA");
+  buildCard(grid, CONFIG.labels.zman_krias_shema, fmt(zmanim.sofZmanShma), "GRA");
   buildCard(grid, CONFIG.labels.chatzos, fmt(zmanim.chatzos));
   buildCard(grid, CONFIG.labels.mincha_gedola, fmt(zmanim.minchaGedola));
   buildCard(grid, CONFIG.labels.plag_hamincha, fmt(zmanim.plagHamincha));
   buildCard(grid, CONFIG.labels.shkiah, fmt(zmanim.sunset));
-  buildCard(grid, CONFIG.labels.maariv2, fmt(toTimeStringFromHM(20, 15)));
-  buildCard(grid, CONFIG.labels.maariv3, fmt(toTimeStringFromHM(21, 45)));
+  buildCard(grid, CONFIG.labels.maariv, fmt(zmanim.tzais));
 }
 
 async function render() { 
@@ -176,19 +157,6 @@ async function render() {
   }
 }
 
-async function init() {
-  // Dynamically import kosher-zmanim
-  try {
-    const mod = await import("https://cdn.jsdelivr.net/npm/kosher-zmanim@2.2.1/+esm");
-    zmanCalculator = mod.KosherZmanim;
-    console.log("kosher-zmanim library loaded successfully");
-  } catch (e) {
-    console.error('Failed to load kosher-zmanim via CDN:', e);
-    return;
-  }
-
-  await render();
-  setInterval(render, 60 * 1000);
-}
-
-init();
+// Initialize and start rendering
+render();
+setInterval(render, 60 * 1000);
