@@ -85,37 +85,31 @@ function setHeader(now) {
   document.getElementById("refreshLine").textContent = `Updated: ${fmt(now)}`; 
 }
 
-let KosherZmanim = null;
+let ZmanimCalendar = null;
+let GeoLocation = null;
 
 async function computeZmanimForDate(jsDate) {
-  if (!KosherZmanim) {
-    console.error("KosherZmanim library not loaded");
+  if (!ZmanimCalendar || !GeoLocation) {
+    console.error("kosher-zmanim library not loaded");
     return null;
   }
 
   try {
-    const options = {
-      date: jsDate,
-      location: {
-        latitude: CONFIG.lat,
-        longitude: CONFIG.lon,
-        timeZoneId: CONFIG.tz,
-      }
-    };
-    
-    const zman = new KosherZmanim(options);
+    const location = new GeoLocation(CONFIG.location, CONFIG.lat, CONFIG.lon, 0, CONFIG.tz);
+    const cal = new ZmanimCalendar(location);
+    cal.setDate(jsDate);
     
     return {
-      alos161: zman.getAlos16Point1Degrees(),
-      sunrise: zman.getSunrise(),
-      sofZmanShmaGRA: zman.getSofZmanShmaGRA(),
-      sofZmanTfilaGRA: zman.getSofZmanTfilaGRA(),
-      chatzos: zman.getChatzos(),
-      minchaGedola: zman.getMinchaGedola(),
-      plagHamincha: zman.getPlagHamincha(),
-      sunset: zman.getSunset(),
-      tzaisGeonim: zman.getTzaisGeonim8Point5Degrees(),
-      tzais72: zman.getTzaisAchutzeiTechilet(),
+      alos161: cal.getAlos16Point1Degrees(),
+      sunrise: cal.getSunrise(),
+      sofZmanShmaGRA: cal.getSofZmanShmaGRA(),
+      sofZmanTfilaGRA: cal.getSofZmanTfilaGRA(),
+      chatzos: cal.getChatzos(),
+      minchaGedola: cal.getMinchaGedola(),
+      plagHamincha: cal.getPlagHamincha(),
+      sunset: cal.getSunset(),
+      tzaisGeonim: cal.getTzaisGeonim8Point5Degrees(),
+      tzais72: cal.getTzaisAchutzeiTechilet(),
     };
   } catch (e) {
     console.error("Error computing zmanim:", e);
@@ -174,14 +168,15 @@ async function render() {
 // Load the kosher-zmanim library
 async function init() {
   try {
-    const mod = await import("https://cdn.jsdelivr.net/npm/kosher-zmanim@2.2.1/+esm");
-    KosherZmanim = mod.KosherZmanim;
+    const mod = await import("https://cdn.jsdelivr.net/npm/kosher-zmanim@3.2.3/dist/bundle.mjs");
+    ZmanimCalendar = mod.ZmanimCalendar;
+    GeoLocation = mod.GeoLocation;
     console.log("✓ kosher-zmanim library loaded successfully");
     await render();
     setInterval(render, 60 * 1000);
   } catch (e) {
     console.error("Failed to load kosher-zmanim library:", e);
-    document.getElementById("todayGrid").innerHTML = "<div class='card' style='grid-column: 1/-1; padding: 20px; text-align: center;'>Error loading zmanim library. Please refresh the page.</div>";
+    document.getElementById("todayGrid").innerHTML = "<div class='card' style='grid-column: 1/-1; padding: 20px; text-align: center; color: #ff6b6b;'><strong>Error loading zmanim library</strong><br><small>" + e.message + "</small></div>";
   }
 }
 
