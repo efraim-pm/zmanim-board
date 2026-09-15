@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="he" dir="rtl">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>לוח זמנים - Zmanim Board</title>
+  <title>Zmanim Board - לוח זמנים</title>
   <style>
     :root { --bg:#070a0f; --fg:#e8eefc; --muted:#9aa6c0; --accent:#6aa6ff; --card: rgba(255,255,255,.06); }
     body { margin:0; background:var(--bg); color:var(--fg); font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
@@ -15,7 +15,7 @@
     .card { background:var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 14px 14px; }
     .row { display:flex; justify-content:space-between; gap:12px; align-items:baseline; }
     .label { color:var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing:.6px; }
-    .label.hebrew { text-transform:none; font-size:16px; }
+    .label.hebrew { text-transform:none; font-size:14px; }
     .time { font-size: 32px; font-weight: 700; }
     .time.small { font-size: 26px; }
     .fine { color:var(--muted); font-size: 12px; margin-top: 8px; line-height: 1.35; }
@@ -31,8 +31,8 @@
   <div class="wrap">
     <div class="top">
       <div>
-        <h1>לוח זמנים</h1>
-        <div class="sub" id="todayLine">טוען…</div>
+        <h1>Zmanim Board - לוח זמנים</h1>
+        <div class="sub" id="todayLine">Loading…</div>
       </div>
       <div class="sub" id="refreshLine"></div>
     </div>
@@ -40,7 +40,7 @@
     <div class="section">
       <div class="panel" id="todaySection">
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-weight:700">היום</div>
+          <div style="font-weight:700">Today / היום</div>
           <div class="flags" id="todayFlags"></div>
         </div>
         <div class="grid" id="todayGrid"></div>
@@ -48,7 +48,7 @@
 
       <div class="panel" id="tomorrowSection">
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-weight:700">מחר</div>
+          <div style="font-weight:700">Tomorrow / מחר</div>
           <div class="flags" id="tomorrowFlags"></div>
         </div>
         <div class="grid" id="tomorrowGrid"></div>
@@ -57,7 +57,7 @@
 
     <div class="footer">
       <div id="debugLine"></div>
-      <div>מתעדכן אוטומטית כל דקה</div>
+      <div>Auto-updates every minute</div>
     </div>
   </div>
 
