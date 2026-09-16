@@ -2,9 +2,9 @@
 
 const CONFIG = {
   tz: "America/New_York",
-  lat: 41.0903,
-  lon: -74.0484,
-  location: "Englewood, NY",
+  lat: 41.1456,
+  lon: -74.1220,
+  location: "Chestnut Ridge, NY",
 
   labels: {
     alosDeg: "Alos 16.1° / עלות 16.1°",
@@ -165,6 +165,181 @@ async function render() {
   }
 }
 
+// Hebrew calendar functions
+const HEBREW_MONTHS = [
+  "ניסן", "אייר", "סיוון", "תמוז", "אב", "אלול",
+  "תשרי", "חשוון", "כסלו", "טבת", "שבט", "אדר"
+];
+
+const HEBREW_DAYS = [
+  "ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"
+];
+
+const ZMANIM_LABELS = [
+  { key: "alos161", hebrew: "עלות 16.1°", english: "Alos 16.1°" },
+  { key: "sunrise", hebrew: "הנץ החמה", english: "Sunrise (sea level)" },
+  { key: "sofZmanShmaGRA", hebrew: "סוף זמן שמע גר״א", english: "Sof Zman Shma GRA" },
+  { key: "sofZmanTfilaGRA", hebrew: "סוף זמן תפלה גר״א", english: "Sof Zman Tfila GRA" },
+  { key: "chatzos", hebrew: "חצות היום", english: "Chatzos" },
+  { key: "minchaGedola", hebrew: "מנחה גדולה", english: "Mincha Gedola" },
+  { key: "plagHamincha", hebrew: "פלג המנחה", english: "Plag Hamincha" },
+  { key: "sunset", hebrew: "שקיעת החמה", english: "Sunset" },
+  { key: "tzaisGeonim", hebrew: "צאת גאונים 8.5°", english: "Tzais Geonim 8.5°" },
+  { key: "tzais72", hebrew: "צאת 72 דקות", english: "Tzais 72 Minutes" },
+];
+
+let currentMonth = null;
+let currentYear = null;
+
+function getHebrewDateInfo(jsDate) {
+  const month = jsDate.getMonth();
+  const day = jsDate.getDate();
+  
+  let hebrewMonth = month - 8;
+  if (hebrewMonth <= 0) hebrewMonth += 12;
+  if (hebrewMonth > 12) hebrewMonth -= 12;
+
+  return {
+    hebrew: `${day} ${HEBREW_MONTHS[hebrewMonth - 1]}`,
+    dayOfWeek: HEBREW_DAYS[jsDate.getDay()]
+  };
+}
+
+async function renderDayCard(jsDate) {
+  const card = document.createElement("div");
+  card.className = "day-card";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dateToCheck = new Date(jsDate);
+  dateToCheck.setHours(0, 0, 0, 0);
+
+  if (dateToCheck.getTime() === today.getTime()) {
+    card.classList.add("today");
+  }
+
+  if (isShabbat(jsDate)) {
+    card.classList.add("shabbat");
+  }
+
+  const header = document.createElement("div");
+  header.className = "day-header";
+
+  const dateInfo = document.createElement("div");
+  const hebrewInfo = getHebrewDateInfo(jsDate);
+  dateInfo.innerHTML = `
+    <div class="day-date">${jsDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
+    <div class="day-hebrew">${hebrewInfo.dayOfWeek} ${hebrewInfo.hebrew}</div>
+  `;
+
+  const badge = document.createElement("div");
+  if (isShabbat(jsDate)) {
+    badge.className = "day-badge";
+    badge.textContent = "Shabbat";
+  } else if (dateToCheck.getTime() === today.getTime()) {
+    badge.className = "day-badge today";
+    badge.textContent = "Today";
+  }
+
+  header.appendChild(dateInfo);
+  if (badge.textContent) header.appendChild(badge);
+  card.appendChild(header);
+
+  const zmanimDiv = document.createElement("div");
+  zmanimDiv.className = "zmanim-list";
+
+  if (isShabbat(jsDate)) {
+    const shabbatMsg = document.createElement("div");
+    shabbatMsg.style.textAlign = "center";
+    shabbatMsg.style.padding = "20px";
+    shabbatMsg.style.color = "var(--warning)";
+    shabbatMsg.textContent = "🕯️ Shabbat Shalom 🕯️";
+    zmanimDiv.appendChild(shabbatMsg);
+  } else {
+    const zmanim = await computeZmanimForDate(jsDate);
+    if (zmanim) {
+      ZMANIM_LABELS.forEach(label => {
+        const zmanItem = document.createElement("div");
+        zmanItem.className = "zman-item";
+
+        const labelEl = document.createElement("div");
+        labelEl.className = "zman-label";
+        labelEl.textContent = label.hebrew;
+
+        const timeEl = document.createElement("div");
+        timeEl.className = "zman-time";
+        timeEl.textContent = fmt(zmanim[label.key]);
+
+        zmanItem.appendChild(labelEl);
+        zmanItem.appendChild(timeEl);
+        zmanimDiv.appendChild(zmanItem);
+      });
+    } else {
+      const errorMsg = document.createElement("div");
+      errorMsg.style.color = "var(--muted)";
+      errorMsg.textContent = "Unable to calculate zmanim";
+      zmanimDiv.appendChild(errorMsg);
+    }
+  }
+
+  card.appendChild(zmanimDiv);
+  return card;
+}
+
+async function renderMonth(month, year) {
+  currentMonth = month;
+  currentYear = year;
+
+  const container = document.getElementById("calendarContainer");
+  container.innerHTML = '<div class="loading"><div class="spinner"></div><div style="margin-top: 12px;">Loading calendar...</div></div>';
+
+  const monthTitle = document.getElementById("monthTitle");
+  monthTitle.textContent = `${new Date(year, month).toLocaleDateString("en-US", { month: "long", year: "numeric" })} / ${HEBREW_MONTHS[month]}`;
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+
+  const calendarGrid = document.createElement("div");
+  calendarGrid.className = "calendar-grid";
+
+  for (let d = firstDay.getDate(); d <= lastDay.getDate(); d++) {
+    const jsDate = new Date(year, month, d);
+    const card = await renderDayCard(jsDate);
+    calendarGrid.appendChild(card);
+  }
+
+  container.innerHTML = "";
+  container.appendChild(calendarGrid);
+}
+
+// Tab switching
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const tabName = btn.dataset.tab;
+    
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+    
+    btn.classList.add("active");
+    document.getElementById(tabName).classList.add("active");
+    
+    if (tabName === "month" && !currentMonth) {
+      const now = new Date();
+      renderMonth(now.getMonth(), now.getFullYear());
+      
+      document.getElementById("prevBtn").addEventListener("click", () => {
+        const date = new Date(currentYear, currentMonth - 1, 1);
+        renderMonth(date.getMonth(), date.getFullYear());
+      });
+
+      document.getElementById("nextBtn").addEventListener("click", () => {
+        const date = new Date(currentYear, currentMonth + 1, 1);
+        renderMonth(date.getMonth(), date.getFullYear());
+      });
+    }
+  });
+});
+
 // Load the kosher-zmanim library
 async function init() {
   try {
@@ -176,7 +351,7 @@ async function init() {
     setInterval(render, 60 * 1000);
   } catch (e) {
     console.error("Failed to load kosher-zmanim library:", e);
-    document.getElementById("todayGrid").innerHTML = "<div class='card' style='grid-column: 1/-1; padding: 20px; text-align: center; color: #ff6b6b;'><strong>Error loading zmanim library</strong><br><small>" + e.message + "</small></div>";
+    document.getElementById("todayGrid").innerHTML = "<div class='card' style='grid-column: 1/-1; padding: 20px; text-align: center; color: #ff6b6b;'><strong>Error loading zmanim library</strong></div>";
   }
 }
 
