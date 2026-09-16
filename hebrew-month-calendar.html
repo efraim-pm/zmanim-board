@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hebrew Month Calendar - לוח שנה עברית</title>
+  <style>
+    :root { 
+      --bg:#070a0f; 
+      --fg:#e8eefc; 
+      --muted:#9aa6c0; 
+      --accent:#6aa6ff; 
+      --card: rgba(255,255,255,.06);
+      --success: #51cf66;
+      --warning: #ffd43b;
+    }
+    body { 
+      margin:0; 
+      background:var(--bg); 
+      color:var(--fg); 
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; 
+    }
+    .wrap { 
+      max-width: 1400px; 
+      margin: 0 auto; 
+      padding: 18px; 
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    h1 { 
+      margin:0; 
+      font-size: 32px; 
+      letter-spacing:.2px; 
+    }
+    .sub { 
+      color:var(--muted); 
+      font-size: 14px; 
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    button {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: opacity 0.2s;
+    }
+    button:hover {
+      opacity: 0.8;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .day-card {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px;
+      padding: 16px;
+      transition: all 0.2s;
+    }
+    .day-card:hover {
+      border-color: rgba(255,255,255,.15);
+      background: var(--card);
+    }
+    .day-card.shabbat {
+      border-color: var(--warning);
+      background: rgba(255, 212, 59, .08);
+    }
+    .day-card.today {
+      border-color: var(--success);
+      background: rgba(81, 207, 102, .08);
+    }
+    .day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+      padding-bottom: 10px;
+    }
+    .day-date {
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .day-hebrew {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .day-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(255,212,59,.2);
+      color: var(--warning);
+      font-weight: 600;
+    }
+    .day-badge.today {
+      background: rgba(81,207,102,.2);
+      color: var(--success);
+    }
+    .zmanim-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .zman-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 8px;
+      background: rgba(255,255,255,.02);
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .zman-label {
+      color: var(--fg);
+    }
+    .zman-time {
+      font-weight: 600;
+      color: var(--accent);
+      font-size: 14px;
+      text-align: right;
+      min-width: 60px;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.1);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .footer {
+      margin-top: 24px;
+      padding: 16px;
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .location-info {
+      font-weight: 600;
+      color: var(--fg);
+    }
+    @media (max-width: 720px) {
+      h1 { font-size: 24px; }
+      .calendar-grid {
+        grid-template-columns: 1fr;
+      }
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div>
+        <h1>Hebrew Month Calendar</h1>
+        <div class="sub">לוח שנה עברית עם זמנים</div>
+      </div>
+      <div class="controls">
+        <button id="prevBtn">← Prev Month</button>
+        <button id="nextBtn">Next Month →</button>
+      </div>
+    </div>
+
+    <div id="monthTitle" class="sub" style="margin-bottom: 20px; font-size: 16px; font-weight: 600;"></div>
+
+    <div id="calendarContainer">
+      <div class="loading">
+        <div class="spinner"></div>
+        <div style="margin-top: 12px;">Loading calendar and zmanim...</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>
+        <span class="location-info">Location: Englewood, NJ (41.09°N, 74.05°W)</span>
+      </div>
+      <div id="lastUpdate"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Hebrew month names
+    const HEBREW_MONTHS = [
+      "ניסן", "אייר", "סיוון", "תמוז", "אב", "אלול",
+      "תשרי", "חשוון", "כסלו", "טבת", "שבט", "אדר"
+    ];
+
+    const HEBREW_DAYS = [
+      "ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"
+    ];
+
+    const CONFIG = {
+      tz: "America/New_York",
+      lat: 41.09030,
+      lon: -74.04840,
+      location: "Englewood, NJ",
+    };
+
+    const timeFmt = new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: CONFIG.tz
+    });
+
+    function fmt(d) {
+      if (!d) return "—";
+      return timeFmt.format(d);
+    }
+
+    // Zmanim labels in order requested
+    const ZMANIM_LABELS = [
+      { key: "alos161", hebrew: "עלות 16.1°", english: "Alos 16.1°" },
+      { key: "sunrise", hebrew: "הנץ החמה", english: "Sunrise (sea level)" },
+      { key: "sofZmanShmaGRA", hebrew: "סוף זמן שמע גר״א", english: "Sof Zman Shma GRA" },
+      { key: "sofZmanTfilaGRA", hebrew: "סוף זמן תפלה גר״א", english: "Sof Zman Tfila GRA" },
+      { key: "chatzos", hebrew: "חצות היום", english: "Chatzos" },
+      { key: "minchaGedola", hebrew: "מנחה גדולה", english: "Mincha Gedola" },
+      { key: "plagHamincha", hebrew: "פלג המנחה", english: "Plag Hamincha" },
+      { key: "sunset", hebrew: "שקיעת החמה", english: "Sunset" },
+      { key: "tzaisGeonim", hebrew: "צאת גאונים 8.5°", english: "Tzais Geonim 8.5°" },
+      { key: "tzais72", hebrew: "צאת 72 דקות", english: "Tzais 72 Minutes" },
+    ];
+
+    let ZmanimCalendar = null;
+    let GeoLocation = null;
+    let currentMonth = null;
+    let currentYear = null;
+
+    // Load the kosher-zmanim library
+    async function loadLibrary() {
+      try {
+        const mod = await import("https://cdn.jsdelivr.net/npm/kosher-zmanim@3.2.3/dist/bundle.mjs");
+        ZmanimCalendar = mod.ZmanimCalendar;
+        GeoLocation = mod.GeoLocation;
+        console.log("✓ kosher-zmanim library loaded");
+        return true;
+      } catch (e) {
+        console.error("Failed to load kosher-zmanim library:", e);
+        return false;
+      }
+    }
+
+    // Compute zmanim for a given date
+    async function getZmanimForDate(jsDate) {
+      if (!ZmanimCalendar || !GeoLocation) return null;
+
+      try {
+        const location = new GeoLocation(CONFIG.location, CONFIG.lat, CONFIG.lon, 0, CONFIG.tz);
+        const cal = new ZmanimCalendar(location);
+        cal.setDate(jsDate);
+
+        return {
+          alos161: cal.getAlos16Point1Degrees(),
+          sunrise: cal.getSunrise(),
+          sofZmanShmaGRA: cal.getSofZmanShmaGRA(),
+          sofZmanTfilaGRA: cal.getSofZmanTfilaGRA(),
+          chatzos: cal.getChatzos(),
+          minchaGedola: cal.getMinchaGedola(),
+          plagHamincha: cal.getPlagHamincha(),
+          sunset: cal.getSunset(),
+          tzaisGeonim: cal.getTzaisGeonim8Point5Degrees(),
+          tzais72: cal.getTzaisAchutzeiTechilet(),
+        };
+      } catch (e) {
+        console.error("Error computing zmanim:", e);
+        return null;
+      }
+    }
+
+    // Helper: Check if date is Shabbat (Saturday)
+    function isShabbat(jsDate) {
+      return jsDate.getDay() === 6;
+    }
+
+    // Helper: Get Hebrew calendar date info (simplified approximation)
+    function getHebrewDateInfo(jsDate) {
+      // Simplified: get approximate Hebrew month
+      // For accurate Hebrew calendar, a library would be needed
+      const month = jsDate.getMonth();
+      const day = jsDate.getDate();
+      
+      // Rough approximation of Hebrew months (this is simplified)
+      let hebrewMonth = month - 8; // Nissan starts in March/April
+      if (hebrewMonth <= 0) hebrewMonth += 12;
+      if (hebrewMonth > 12) hebrewMonth -= 12;
+
+      return {
+        hebrew: `${day} ${HEBREW_MONTHS[hebrewMonth - 1]}`,
+        dayOfWeek: HEBREW_DAYS[jsDate.getDay()]
+      };
+    }
+
+    // Render a single day card
+    async function renderDayCard(jsDate) {
+      const card = document.createElement("div");
+      card.className = "day-card";
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dateToCheck = new Date(jsDate);
+      dateToCheck.setHours(0, 0, 0, 0);
+
+      if (dateToCheck.getTime() === today.getTime()) {
+        card.classList.add("today");
+      }
+
+      if (isShabbat(jsDate)) {
+        card.classList.add("shabbat");
+      }
+
+      // Day header
+      const header = document.createElement("div");
+      header.className = "day-header";
+
+      const dateInfo = document.createElement("div");
+      const hebrewInfo = getHebrewDateInfo(jsDate);
+      dateInfo.innerHTML = `
+        <div class="day-date">${jsDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
+        <div class="day-hebrew">${hebrewInfo.dayOfWeek} ${hebrewInfo.hebrew}</div>
+      `;
+
+      const badge = document.createElement("div");
+      if (isShabbat(jsDate)) {
+        badge.className = "day-badge";
+        badge.textContent = "Shabbat";
+      } else if (dateToCheck.getTime() === today.getTime()) {
+        badge.className = "day-badge today";
+        badge.textContent = "Today";
+      }
+
+      header.appendChild(dateInfo);
+      if (badge.textContent) header.appendChild(badge);
+      card.appendChild(header);
+
+      // Zmanim list
+      const zmanimDiv = document.createElement("div");
+      zmanimDiv.className = "zmanim-list";
+
+      if (isShabbat(jsDate)) {
+        const shabbatMsg = document.createElement("div");
+        shabbatMsg.style.textAlign = "center";
+        shabbatMsg.style.padding = "20px";
+        shabbatMsg.style.color = "var(--warning)";
+        shabbatMsg.textContent = "🕯️ Shabbat Shalom 🕯️";
+        zmanimDiv.appendChild(shabbatMsg);
+      } else {
+        const zmanim = await getZmanimForDate(jsDate);
+        if (zmanim) {
+          ZMANIM_LABELS.forEach(label => {
+            const zmanItem = document.createElement("div");
+            zmanItem.className = "zman-item";
+
+            const labelEl = document.createElement("div");
+            labelEl.className = "zman-label";
+            labelEl.textContent = label.hebrew;
+
+            const timeEl = document.createElement("div");
+            timeEl.className = "zman-time";
+            timeEl.textContent = fmt(zmanim[label.key]);
+
+            zmanItem.appendChild(labelEl);
+            zmanItem.appendChild(timeEl);
+            zmanimDiv.appendChild(zmanItem);
+          });
+        } else {
+          const errorMsg = document.createElement("div");
+          errorMsg.style.color = "var(--muted)";
+          errorMsg.textContent = "Unable to calculate zmanim";
+          zmanimDiv.appendChild(errorMsg);
+        }
+      }
+
+      card.appendChild(zmanimDiv);
+      return card;
+    }
+
+    // Render entire month
+    async function renderMonth(month, year) {
+      currentMonth = month;
+      currentYear = year;
+
+      const container = document.getElementById("calendarContainer");
+      container.innerHTML = '<div class="loading"><div class="spinner"></div><div style="margin-top: 12px;">Loading calendar...</div></div>';
+
+      // Update title
+      const monthTitle = document.getElementById("monthTitle");
+      monthTitle.textContent = `${new Date(year, month).toLocaleDateString("en-US", { month: "long", year: "numeric" })} / ${HEBREW_MONTHS[month]}`;
+
+      // Generate date range for the month
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+
+      const calendarGrid = document.createElement("div");
+      calendarGrid.className = "calendar-grid";
+
+      // Render each day
+      for (let d = firstDay.getDate(); d <= lastDay.getDate(); d++) {
+        const jsDate = new Date(year, month, d);
+        const card = await renderDayCard(jsDate);
+        calendarGrid.appendChild(card);
+      }
+
+      container.innerHTML = "";
+      container.appendChild(calendarGrid);
+
+      // Update last update time
+      document.getElementById("lastUpdate").textContent = `Updated: ${timeFmt.format(new Date())}`;
+    }
+
+    // Initialize
+    async function init() {
+      const loaded = await loadLibrary();
+      if (!loaded) {
+        document.getElementById("calendarContainer").innerHTML = 
+          '<div class="loading" style="color: #ff6b6b;"><strong>Error loading zmanim library</strong></div>';
+        return;
+      }
+
+      const now = new Date();
+      await renderMonth(now.getMonth(), now.getFullYear());
+
+      // Set up controls
+      document.getElementById("prevBtn").addEventListener("click", () => {
+        const date = new Date(currentYear, currentMonth - 1, 1);
+        renderMonth(date.getMonth(), date.getFullYear());
+      });
+
+      document.getElementById("nextBtn").addEventListener("click", () => {
+        const date = new Date(currentYear, currentMonth + 1, 1);
+        renderMonth(date.getMonth(), date.getFullYear());
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
